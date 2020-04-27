@@ -18,10 +18,30 @@ jobs:
       run: ./gradlew spotlessCheck
     - name: Set up DynamoDBLocal
       run:  docker run -d -p 8000:8000 amazon/dynamodb-local:latest -jar ./DynamoDBLocal.jar -inMemory -sharedDb -port 8000
+    - name: Set up AWS profile credentials
+      run: |
+        mkdir -p $HOME/.aws
+        cat <<EOS > $HOME/.aws/credentials
+        [test]
+        aws_access_key_id = ${AWS_ACCESS_KEY_ID}
+        aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}
+        EOS
+        cat <<EOS > $HOME/.aws/config
+        [test]
+        region = us-east-1
+        EOS
+      env:
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
     - name: Test with Gradle
       run: ./gradlew test
       env:
-        RUN_AWS_CREDENTIALS_TEST: false
+        EMBULK_DYNAMODB_TEST_PROFILE_NAME: test
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        EMBULK_DYNAMODB_TEST_ACCESS_KEY: ${{secrets.AWS_ACCESS_KEY_ID}}
+        EMBULK_DYNAMODB_TEST_SECRET_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        EMBULK_DYNAMODB_TEST_ASSUME_ROLE_ROLE_ARN: ${{secrets.EMBULK_DYNAMODB_TEST_ASSUME_ROLE_ROLE_ARN}}
     - name: Archive test results
       if: always()
       uses: actions/upload-artifact@v1
